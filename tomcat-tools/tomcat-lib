@@ -1,0 +1,105 @@
+#!/bin/sh
+
+
+# Looks for a Tomcat directory starting from first parameter 
+# or current directory (if called with no parameters). Sets
+# TOMCAT_DIR and TOMCATLIB_STARTDIR variables
+find_tomcat_dir() {
+	if [ -z "$1" ]
+	then
+		TOMCATLIB_STARTDIR=`pwd`
+	else
+		TOMCATLIB_STARTDIR="$1"
+	fi
+	DIR="$TOMCATLIB_STARTDIR"
+	for i in `seq 0 16`
+	do
+		CANDIDATE=`readlink -f $DIR`
+		if  [ -r "$CANDIDATE/bin/catalina.sh" ] 
+		then
+			TOMCAT_DIR="$CANDIDATE"
+			return
+		fi
+		if [ -r "$CANDIDATE/apache-tomcat/bin/catalina.sh" ]
+		then
+			TOMCAT_DIR="$CANDIDATE/apache-tomcat"
+			return
+		fi
+		
+		DIR="$DIR/.."
+	done
+}
+
+startup() {
+	echo "$PREFIX startup()"
+	/bin/bash "$TOMCAT_DIR/bin/startup.sh"
+}
+
+shutdown() {
+	echo "$PREFIX shutdown()"
+	/bin/bash "$TOMCAT_DIR/bin/shutdown.sh"
+}
+
+tailf() {
+	tail -f "$TOMCAT_DIR/logs/catalina.out"
+}
+
+killcats() {
+	if [ -n "$TOMCAT_PID" ]
+	then
+		kill -9 "$TOMCAT_PID"
+	else
+		echo "$PREFIX KILL: was dead, abort mission"
+	fi
+}
+
+# Sets TOMCAT_PORT by inspecting $TOMCAT_DIR/conf/server.xml
+# Easily fooled
+find_port() {
+	TOMCAT_PORT=`grep -E 'Connector\s+port="(.*?)" protocol="HTTP/1.1"' "$TOMCAT_DIR/conf/server.xml" | grep -v SSL | xargs | cut -d \  -f 2 | grep -Eo '[0-9]+'`
+}
+
+# Sets TOMCAT_PID to the PID listening on $TOMCAT_PORT
+find_pid() {
+	LINE=`netstat -ntlp 2> /dev/null | grep $TOMCAT_PORT`
+	TOMCAT_PID=`echo $LINE | cut -d \  -f 7  | grep -Eo '[0-9]+'`
+}
+
+
+# returns 1 on dead, 0 on alive
+is_dead() {
+	netstat -ntlp 2> /dev/null | grep $TOMCAT_PORT > /dev/null
+	return $?
+}
+
+wait_for_dead() {
+	LEFT=$1
+	echo -n "Waiting $LEFT seconds "
+	while [ $LEFT -gt 0 ]
+	do
+		is_dead
+		if [ $? -eq 1 ]; then
+			echo " confirmed dead"
+			return 0
+		fi
+		sleep 1
+		echo -n '.'
+		LEFT=$(($LEFT-1))
+	done
+	echo " still alive"
+	return 1
+}
+
+find_tomcat_dir "$1"
+if [ -z "$TOMCAT_DIR" ]
+then
+	echo "Couldn't locate Tomcat starting from $TOMCATLIB_STARTDIR" 1>&2
+	exit 1
+else
+	find_port "$TOMCAT_DIR"
+	find_pid
+	PREFIX="**"
+	#echo "$PREFIX directory: $TOMCAT_DIR"
+	#echo "$PREFIX port     : $TOMCAT_PORT"
+	#echo "$PREFIX pid      : $TOMCAT_PID"
+fi

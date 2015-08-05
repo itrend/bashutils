@@ -1,0 +1,6 @@
+#!/bin/sh
+
+LIBDIR=`dirname $0`
+. "$LIBDIR/tomcat-lib" "$1"
+
+tailf

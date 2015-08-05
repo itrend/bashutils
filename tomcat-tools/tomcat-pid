@@ -1,0 +1,12 @@
+#!/bin/sh
+
+LIBDIR=`dirname $0`
+. "$LIBDIR/tomcat-lib" "$1"
+
+if [ -n "$TOMCAT_PID" ]
+then
+	echo $TOMCAT_PID
+	return 0
+else
+	return 1
+fi

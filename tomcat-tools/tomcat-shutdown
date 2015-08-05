@@ -1,0 +1,8 @@
+#!/bin/sh
+
+LIBDIR=`dirname $0`
+. "$LIBDIR/tomcat-lib" "$1"
+
+shutdown
+wait_for_dead 10
+killcats

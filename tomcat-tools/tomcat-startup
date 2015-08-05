@@ -1,0 +1,12 @@
+#!/bin/sh
+
+LIBDIR=`dirname $0`
+. "$LIBDIR/tomcat-lib" "$1"
+
+TAIL=[ "$1" != "-n" ]
+
+startup
+if $TAIL
+then
+	tailf
+fi

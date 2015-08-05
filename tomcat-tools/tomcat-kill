@@ -1,0 +1,7 @@
+#/bin/sh
+
+LIBDIR=`dirname $0`
+. "$LIBDIR/tomcat-lib"
+
+killcats
+
