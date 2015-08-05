@@ -1,0 +1,40 @@
+#!/bin/sh
+
+usage() {
+	echo "Finds and 'kill's the pid listening on the specified port" >&2 
+	echo "Usage: $0 [options-for-kill] <port-number>" >&2
+	exit 1
+}
+
+if [ $# -le 0 ]; then
+	usage
+fi
+
+PARAMS=
+PORT=
+for i in $@; do
+	if [ "$i" = "-h" -o "$i" = "--help" ]; then
+		usage
+	elif echo $i | grep -q '^-' ; then
+		PARAMS="$PARAMS $i"
+	else
+		PORT=$i
+	fi
+done
+
+if [ -z "$PORT" ]; then
+	usage
+fi
+
+PATTERN=":$PORT"
+#echo "'$PATTERN' '$PARAMS'"
+
+PID=`netstat -ntlp 2>/dev/null | grep $PATTERN | grep -E '([0-9]+)/.+$' -o | cut -d '/' -f 1`
+if [ -z "$PID" ]; then
+	echo "No process found for port $PORT" >&2
+	exit 1
+fi
+
+echo "Killing ${PID}..."
+kill $PARAMS $PID
+
